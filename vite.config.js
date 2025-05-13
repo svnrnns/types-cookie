@@ -12,6 +12,13 @@ export default defineConfig({
   plugins: [
     dts({
       insertTypesEntry: true,
+      outDir: 'dist',
+      entryRoot: 'lib',
     }),
   ],
+  test: {
+    environment: 'happy-dom', // Use Happy DOM instead of jsdom
+    globals: true, // Enable global test functions (describe, it, expect)
+    setupFiles: ['./tests/setup.ts'], // Optional setup file
+  },
 });

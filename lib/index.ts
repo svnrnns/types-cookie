@@ -1,18 +1,18 @@
 import Cookie from './Cookie';
+import { type ZodSchema } from 'zod';
 import { type CookieOptions } from './types';
 
 const defaultCookie = new Cookie();
 
 /**
- * Retrieves a value from a cookie with type safety and a fallback.
- * @template T - The type of the value being stored.
+ * Retrieves a value from a cookie by key, with a fallback value and Zod schema validation.
+ * @template T - The expected type of the retrieved value.
  * @param key - The key of the cookie to retrieve.
- * @param fallback - The default value if the cookie is not found or invalid.
- * @param validator - Optional validation function.
- * @returns The retrieved value or fallback.
+ * @param fallback - The default value to return if the cookie is not found or invalid.
+ * @param schema - Zod schema to validate the parsed value.
+ * @returns The retrieved value or the fallback value if retrieval fails.
  */
-const get = <T>(key: string, fallback: T, validator?: (value: any) => boolean): T =>
-  defaultCookie.get(key, fallback, validator);
+const get = <T>(key: string, fallback: T, schema: ZodSchema<T>): T => defaultCookie.get(key, fallback, schema);
 
 /**
  * Sets a value in a cookie with optional configuration.
@@ -28,11 +28,14 @@ const set = <T>(key: string, value: T, options?: CookieOptions): void => default
  */
 const remove = (key: string): void => defaultCookie.remove(key);
 
+/** Wipes the whole Cookie store */
+const clear = (): void => defaultCookie.clear();
+
 /**
  * Checks if cookies are enabled in the browser.
  * @returns {boolean} True if cookies are enabled, false otherwise.
  */
 const isEnabled = (): boolean => Cookie.isEnabled();
 
-export { Cookie, get, set, remove, isEnabled };
+export { Cookie, get, set, remove, clear, isEnabled };
 export { type CookieOptions };

@@ -1,10 +1,11 @@
 # Type Safe Cookie
 
-`types-cookie` is a lightweight TypeScript library for managing browser cookies with type safety and a flexible, modern API.
+`types-cookie` is a lightweight TypeScript library for managing browser cookies with type safety and a flexible, modern API. <br/>
+It uses **Zod** for type validation.
 
 ## Features
 
-- **Type Safety**: Built for TypeScript with generic types.
+- **Type Safety**: Built for TypeScript with generic types and Zod schemas.
 - **Fallback values**: To make sure a value of the same type is always retrieved.
 - **Safe Cookie Access**: Handles JSON parsing errors gracefully.
 - **Flexible Expiration:** Set expiration in days, hours, minutes, or "never".
@@ -16,57 +17,53 @@
 Install `types-cookie` via npm:
 
 ```bash
-npm install types-cookie
+npm install types-cookie zod
 ```
 
 ## Ready to use
 
-Easily store and retrieve user settings that persist across sessions. You can create a Cookie object or access the methods directly from the package:
+Easily store and retrieve user settings that persist across sessions. Use direct methods or create a `Cookie` object:
 
 ```ts
-import { Cookie, set, get } from 'types-cookie';
+import { Cookie, set as setCookie } from 'types-cookie';
 
 const cookie = new Cookie();
 
 /** Use an object or access the method directly */
 cookie.set('theme', 'dark', { expires: { days: 30 } });
-set('theme', 'dark', { expires: { days: 30 } });
+setCookie('theme', 'dark', { expires: { days: 30 } });
 ```
 
-When retrieving data. A fallback value must be passed in case the stored value type does not match what we want to receive.
-**Use generic types** to specify the desired types.
+Retrieve data with a fallback value and a Zod schema to ensure type safety:
 
 ```ts
-/** Will return light if the type validation fails or key 'light' is not found in cookies */
-const theme = get<'light' | 'dark'>('theme', 'light');
+import { get as getCookie } from 'types-cookie';
+
+const themeSchema = z.enum(['light', 'dark']);
+const theme = getCookie('theme', 'light', themeSchema);
+// Returns 'light' if key 'theme' is not found or invalid
 ```
 
-Store temporary data with fine-grained expiration control and/or deep objects validation.
+Store arrays or complex objects with Zod validation:
 
 ```ts
-set('filters', ['desc', 'price'], {
-  expires: { hours: 2 },
-});
+setCookie('filters', ['desc', 'price'], { expires: { hours: 2 } });
 
-const stringArrayValidator = (value: any): boolean => {
-  return Array.isArray(value) && value.every((v) => typeof v === 'string');
-};
-
-const filters = get<string[]>('filters', [], stringArrayValidator); // Expected output: ['desc', 'price'], will return [] if the array did not pass the validator
+const stringArraySchema = z.array(z.string());
+const filters = getCookie('filters', [], stringArraySchema);
+// Returns ['desc', 'price'] or [] if invalid
 ```
 
-Data can be set to never expire:
+Cookies can be set to never expire:
 
 ```ts
-set('token', 'xxxx', { expires: 'never' });
-
-const token = get('token', '');
+setCookie('token', 'xxxx', { expires: 'never' });
 ```
 
-Take a look at the cookie options parameter:
+Configure cookie options for advanced use cases:
 
 ```ts
-set(
+setCookie(
   'cookieConsent',
   { analytics: true, marketing: false },
   {
@@ -76,8 +73,6 @@ set(
     sameSite: 'Lax',
   }
 );
-
-const consent = get('cookieConsent', { analytics: false, marketing: false });
 ```
 
 ## API Reference
@@ -89,8 +84,9 @@ const consent = get('cookieConsent', { analytics: false, marketing: false });
 ### Instance methods (also available as exports)
 
 - `set<T>(key: string, value: T, options?: CookieOptions): void` : Stores a value in a cookie with optional configuration.
-- `get<T>(key: string, fallback: T, validator?: (value: any) => boolean): T`: Retrieves a value with type safety and optional validator.
+- `get<T>(key: string, fallback: T, schema: ZodSchema<T>): T`: Retrieves a value with type safety using a Zod schema.
 - `remove(key: string): void`: Deletes cookie by key.
+- `clear(): void`: Clears all cookies.
 
 ### Types:
 

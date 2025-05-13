@@ -1,3 +1,4 @@
+import { ZodSchema } from 'zod';
 import { type CookieOptions } from './types';
 
 export default class Cookie {
@@ -41,6 +42,15 @@ export default class Cookie {
     return date;
   }
 
+  private isValidJson(value: any): boolean {
+    try {
+      JSON.parse(value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * Checks if cookies are enabled in the browser.
    * @returns True if cookies are enabled, false otherwise.
@@ -64,7 +74,8 @@ export default class Cookie {
       sameSite,
     } = options;
 
-    const cookieValue = JSON.stringify(value);
+    const isPrimitive = typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+    const cookieValue = isPrimitive ? String(value) : JSON.stringify(value);
     let cookie = `${key}=${encodeURIComponent(cookieValue)}`;
 
     const expirationDate = this.getExpirationDate(expires);
@@ -81,30 +92,24 @@ export default class Cookie {
   }
 
   /**
-   * Retrieves a value from a cookie by key, with a fallback value and optional validator.
+   * Retrieves a value from a cookie by key, with a fallback value and Zod schema validation.
    * @template T - The expected type of the retrieved value.
    * @param key - The key of the cookie to retrieve.
    * @param fallback - The default value to return if the cookie is not found or invalid.
-   * @param validator - Optional function to validate the parsed value.
+   * @param schema - Zod schema to validate the parsed value.
    * @returns The retrieved value or the fallback value if retrieval fails.
    */
-  get<T>(key: string, fallback: T, validator?: (value: any) => boolean): T {
+  get<T>(key: string, fallback: T, schema: ZodSchema<T>): T {
     const cookies = document.cookie.split(';');
     const cookie = cookies.map((cookie) => cookie.trim()).find((cookie) => cookie.startsWith(`${key}=`));
 
     if (!cookie) return fallback;
 
-    try {
-      const value = decodeURIComponent(cookie.split('=')[1]);
-      const parsed = JSON.parse(value);
+    const value = decodeURIComponent(cookie.split('=')[1]);
+    const parsed = this.isValidJson(value) ? JSON.parse(value) : value;
 
-      if (validator ? validator(parsed) : typeof parsed === typeof fallback) {
-        return parsed as T;
-      }
-    } catch {
-      // JSON parsing failed, fallback to default value
-    }
-    return fallback;
+    const result = schema.safeParse(parsed);
+    return result.success ? result.data : fallback;
   }
 
   /**
@@ -113,5 +118,16 @@ export default class Cookie {
    */
   remove(key: string): void {
     document.cookie = `${key}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+  }
+
+  /** Wipes the whole cookie store. */
+  clear(): void {
+    document.cookie.split(';').forEach((cookie) => {
+      const eqPos = cookie.indexOf('=');
+      const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
+      if (name) {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      }
+    });
   }
 }
